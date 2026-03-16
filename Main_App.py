@@ -14,8 +14,12 @@ class GestureApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("AI Gesture Controller")
         self.attributes("-fullscreen", True)
+
+        bg_pil = Image.open("ML-BG.png").resize((self.winfo_screenwidth(), self.winfo_screenheight()))
+        self.bg_image = ImageTk.PhotoImage(bg_pil)
+        self.bg_label = ctk.CTkLabel(self, text="",image=self.bg_image)
+        self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
 
         # Load Model
         try:
@@ -31,25 +35,43 @@ class GestureApp(ctk.CTk):
             min_tracking_confidence=0.5
         )
 
-        # Setup Camera
         self.cap = cv2.VideoCapture(0)
-
-        # --- UI LAYOUT ---
         self.grid_columnconfigure(0, weight=1)
         
-        self.header = ctk.CTkLabel(self, text="AI Hand-Controlled Car", font=("Roboto", 24, "bold"))
-        self.header.pack(pady=10)
-
         # Video Display Label
-        self.video_label = ctk.CTkLabel(self, text="")
-        self.video_label.pack()
+        self.video_label = ctk.CTkLabel(self, text="", bg_color="transparent")
+        self.video_label.place(relx=0.72, rely=0.47, anchor="center")
 
         # Prediction Label
-        self.label_status = ctk.CTkLabel(self, text="Waiting for Hands...", font=("Roboto", 30, "bold"), text_color="#3b8ed0")
-        self.label_status.pack(pady=20)
+        self.label_status = ctk.CTkLabel(self, text="Waiting...", font=("Montserrat", 65, "bold"), text_color="#db0d00", bg_color="#ffffff" )
+        self.label_status.place(relx=0.06, rely=0.22, anchor="nw")
 
-        # Start the loop
+        # Create the Close Button
+        self.close_button = ctk.CTkButton(
+            self, 
+            text="✕", 
+            width=40, 
+            height=40, 
+            fg_color="#db0d00",      # Matches your red text color
+            hover_color="#aa0a00",   # Darker red when hovering
+            text_color="white",
+            font=("Arial", 20, "bold"),
+            corner_radius=0,         # Square look to match the corner
+            command=self.on_closing # Calls the function to stop camera and exit
+        )
+
+        # Position it in the extreme top-right corner
+        self.close_button.place(relx=1.0, rely=0.0, anchor="ne")
+
         self.update_frame()
+
+    def on_closing(self):
+        # Stop the camera 
+        if hasattr(self, 'cap') and self.cap.isOpened():
+            self.cap.release()
+        # Close the window
+        self.destroy()
+        print("Program closed safely.")
 
     def update_frame(self):
         ret, frame = self.cap.read()
@@ -85,11 +107,11 @@ class GestureApp(ctk.CTk):
                 prediction = self.model.predict(features)[0]
 
             # 3. Update UI Text
-            self.label_status.configure(text=f"COMMAND: {prediction}")
+            self.label_status.configure(text=f"{prediction}")
 
             # 4. Convert OpenCV image to Tkinter format
             # Resize slightly for better performance on Pi
-            frame_small = cv2.resize(frame, (600, 400))
+            frame_small = cv2.resize(frame, (840, 690))
             img_pil = Image.fromarray(cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB))
             img_tk = ImageTk.PhotoImage(image=img_pil)
             
